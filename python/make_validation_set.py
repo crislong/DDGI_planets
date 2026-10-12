@@ -1,6 +1,6 @@
 """
-Reference values from the original Python code (exact Lambda, 50 bisection
-iterations, St_star criterion) on a coarse (Mdot, r) grid, used by
+Reference values from the Python model (Lambda at (c_d/c_s)^2, largest root
+of eq. C1, 50 bisection iterations) on a coarse (Mdot, r) grid, used by
 tests/validate.mjs to check the JavaScript port.
 
 Usage: python make_validation_set.py > ../tests/reference.json
@@ -25,7 +25,7 @@ for c in CASES:
     g = disc_model(md, r, mstar=c['mstar'])
     ok = (g['alpha'] > 1e-4) & (g['alpha'] < 0.06)
     sub = {k: v[ok] for k, v in g.items()}
-    d = dust_quantities_stokes2(sub, c['vfrag'] * 100, n_iter=50,
+    d = dust_quantities_stokes2(sub, c['vfrag'] * 100, n_iter=50, n_lamb=4000,
                                 eps_max=c['eps_max'], sigma_log=c['sigma_log'],
                                 eps_floor=c['eps_floor'])
     M, R = np.meshgrid(md, r, indexing='ij')
