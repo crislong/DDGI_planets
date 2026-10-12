@@ -84,30 +84,18 @@ export function epsOfSt(st, p) {
   return p.epsBkg + (p.epsMax - p.epsBkg) * Math.exp(-(x * x) / (2 * p.sigEps * p.sigEps));
 }
 
-// Implicit equation (C1): c_d/c_s = [Lambda((c_d/c_s)^2, eps, St) / beta]^(1/3).
-// It can have three roots where St ~ 0.2-1: the middle one is unstable,
-// and of the two stable ones we take the largest, i.e. the branch reached
-// by grains growing from small St (the only root at small St). The residual
-// is scanned downwards from 10 to 1e-4 (0.025 dex steps) to bracket the
-// largest root, then refined by geometric bisection.
-// Returns NaN if no root is found.
-const SCAN_HI = 10, SCAN_LO = 1e-4, SCAN_STEP = 10 ** -0.025;
+// Implicit equation (C1), geometric bisection on [1e-8, 1e3] as in
+// solve_cdcs_vec. Returns NaN if the residual does not change sign.
 export function solveCdcs(T, eps, st, beta, p) {
   const sq = p.bConv === 'cdcs2';
   const lam = lambda3At(T, eps, st);
   const res = (x) => x - Math.cbrt(lam(sq ? x * x : x) / beta);
-  let hi = SCAN_HI, fhi = res(hi), lo = NaN, flo = NaN;
-  for (let x = hi * SCAN_STEP; x >= SCAN_LO * 0.999; x *= SCAN_STEP) {
-    const f = res(x);
-    if (Math.sign(f) !== Math.sign(fhi)) { lo = x; flo = f; break; }
-    hi = x; fhi = f;
-  }
-  if (Number.isNaN(lo)) { // nothing in the scanned range: try below it
-    lo = 1e-8; flo = res(lo); hi = SCAN_LO; fhi = res(hi);
-    if (!(Math.sign(flo) !== Math.sign(fhi))) return NaN;
-  }
-  // stop once the bracket is narrower than 1e-7 in ratio (well below the
-  // table accuracy), or after nIter iterations
+  let lo = 1e-8, hi = 1e3;
+  let flo = res(lo);
+  const fhi = res(hi);
+  if (!(Math.sign(flo) !== Math.sign(fhi))) return NaN;
+  // nIter iterations as in the paper, but stop once the bracket is
+  // narrower than 1e-7 in ratio (well below the table accuracy)
   for (let i = 0; i < p.nIter && hi > lo * (1 + 1e-7); i++) {
     const mid = Math.sqrt(lo * hi);
     const fm = res(mid);
@@ -198,6 +186,6 @@ export const DEFAULTS = {
   mstar: 1, // Msun
   a0: 1, // micron
   rhoS: 1, // g/cm^3
-  bConv: 'cdcs2', // argument of Lambda in eq. (C1): (c_d/c_s)^2 (temperature ratio), or c_d/c_s (original code)
+  bConv: 'cdcs', // argument of Lambda in eq. (C1): c_d/c_s (as in the code) or (c_d/c_s)^2
   nIter: 50,
 };

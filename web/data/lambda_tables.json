@@ -1,7 +1,7 @@
 {
  "encoding": {
   "type": "uint16le",
-  "log10_lo": -7.0,
+  "log10_lo": -3.0,
   "log10_hi": 1.5,
   "nan_code": 0,
   "qmin": 1,

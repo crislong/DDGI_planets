@@ -12,7 +12,7 @@ and interpolated (trilinearly in log space) in the browser:
              for the Jeans mass in dust_quantities_stokes2.
 
 The location of the maximum of the marginal stability curve is found on a
-dense log-spaced grid in lambda and refined with a parabolic fit, so the tables are
+dense grid in lambda and refined with a parabolic fit, so the tables are
 smoother than a plain argmax.
 
 Output (in ../web/data):
@@ -41,9 +41,8 @@ AX_ST = dict(lo=-4.0, hi=3.0, n=113)      # St
 AX_B2 = dict(lo=-8.0, hi=4.0, n=961)      # b for the Jeans-mass table
 AX_EPS2 = dict(lo=-3.0, hi=0.625, n=363)  # eps for the Jeans-mass table
 
-LOG_LAM_LO, LOG_LAM_HI = -7.0, 1.5
-N_LAMB = 3000
-LAMB_MIN = 1e-8
+LOG_LAM_LO, LOG_LAM_HI = -3.0, 1.5
+N_LAMB = 2000
 
 
 def axis(ax):
@@ -53,10 +52,9 @@ def axis(ax):
 def lambda_peak(b, eps, st, n_lamb=N_LAMB):
     """Lambda = 2 * argmax of the marginal stability curve (refined)."""
     b = b[:, None]; eps = eps[:, None]; st = st[:, None]
-    # log-spaced in lambda, to resolve the short-wavelength (dust) peak
     lmax = 1.05 * (1 + eps)
     t = np.linspace(0, 1, n_lamb)[None, :]
-    lamb = LAMB_MIN * (lmax / LAMB_MIN)**t
+    lamb = t * lmax
     Bb = B_st_BR(lamb, eps, b, st)
     Cb = C_st_BR(lamb, eps, st)
     disc = Bb**2 - 4 * A(b) * Cb
@@ -71,7 +69,8 @@ def lambda_peak(b, eps, st, n_lamb=N_LAMB):
     with np.errstate(invalid='ignore', divide='ignore'):
         shift = np.where(np.isfinite(den) & (den < 0), 0.5 * (y0 - y2) / den, 0.0)
     shift = np.clip(np.nan_to_num(shift), -1, 1)
-    lam = 2 * LAMB_MIN * (lmax[:, 0] / LAMB_MIN)**((i + shift) / (n_lamb - 1))
+    dl = lmax[:, 0] / (n_lamb - 1)
+    lam = 2 * (i + shift) * dl
     return np.where(all_nan, np.nan, lam)
 
 

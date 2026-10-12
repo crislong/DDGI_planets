@@ -36,9 +36,8 @@ def get_Lambda_vec(cdcs, eps, st, n_lamb=1000, lamb_pad=1.0):
     eps  = np.asarray(eps,  dtype=float)
     st   = np.asarray(st,   dtype=float)
 
-    # log-spaced grid: the dust-dominated peak can sit at lambda << 1
     lamb_max = lamb_pad * (1 + np.nanmax(eps))
-    lamb = np.logspace(-8, np.log10(lamb_max), n_lamb)
+    lamb = np.linspace(0, lamb_max, n_lamb)
 
     lamb_b  = lamb[None, :]
     alpha_b = eps[:, None]
@@ -63,17 +62,7 @@ def get_Lambda_vec(cdcs, eps, st, n_lamb=1000, lamb_pad=1.0):
 
 
 def solve_cdcs_vec(eps, st, beta, cdcs_min=1e-8, cdcs_max=1e3,
-                    n_iter=50, n_lamb=1000, verbose=False, scan_lo=1e-4,
-                    scan_hi=10.0, scan_dex=0.025):
-    """Largest root of cdcs = (Lambda((cdcs)^2, eps, St) / beta)^(1/3).
-
-    The dispersion relation takes the temperature ratio (c_d/c_s)^2. With it
-    eq. (C1) can have three roots where St ~ 0.2-1: the middle one is
-    unstable, and of the two stable ones the largest is the branch reached
-    by grains growing from small St (it is the only root at small St). The
-    residual is scanned downwards from scan_hi to find the largest sign
-    change, then refined by geometric bisection.
-    """
+                    n_iter=50, n_lamb=1000, verbose=False):
     eps, st, beta = np.broadcast_arrays(np.asarray(eps, dtype=float),
                                          np.asarray(st,  dtype=float),
                                          np.asarray(beta, dtype=float))
@@ -81,26 +70,17 @@ def solve_cdcs_vec(eps, st, beta, cdcs_min=1e-8, cdcs_max=1e3,
     eps_f, st_f, beta_f = eps.ravel(), st.ravel(), beta.ravel()
 
     def residual_vec(cdcs):
-        lam = get_Lambda_vec(cdcs**2, eps_f, st_f, n_lamb=n_lamb)
+        lam = get_Lambda_vec(cdcs, eps_f, st_f, n_lamb=n_lamb)
         return cdcs - (lam / beta_f)**(1/3)
 
-    n_scan = int(round(np.log10(scan_hi / scan_lo) / scan_dex))
-    xs = scan_hi * (scan_lo / scan_hi)**(np.arange(n_scan + 1) / n_scan)
-    hi = np.full_like(eps_f, np.nan); lo = np.full_like(eps_f, np.nan)
-    f_prev = residual_vec(np.full_like(eps_f, xs[0]))
-    for x0, x1 in zip(xs[:-1], xs[1:]):
-        f1 = residual_vec(np.full_like(eps_f, x1))
-        new = np.isnan(hi) & (np.sign(f1) != np.sign(f_prev)) & ~np.isnan(f1) & ~np.isnan(f_prev)
-        hi = np.where(new, x0, hi); lo = np.where(new, x1, lo)
-        f_prev = f1
-    # no sign change in the scanned range: fall back to the full interval
-    rest = np.isnan(hi)
-    lo = np.where(rest, cdcs_min, lo); hi = np.where(rest, scan_lo if scan_lo > cdcs_min else cdcs_max, hi)
+    lo = np.full_like(eps_f, cdcs_min)
+    hi = np.full_like(eps_f, cdcs_max)
 
     f_lo = residual_vec(lo)
     f_hi = residual_vec(hi)
     valid = (np.sign(f_lo) != np.sign(f_hi)) & ~np.isnan(f_lo) & ~np.isnan(f_hi)
 
+    t_start = time.time()
     for i in range(n_iter):
         mid = np.sqrt(lo * hi)
         f_mid = residual_vec(mid)
@@ -109,7 +89,8 @@ def solve_cdcs_vec(eps, st, beta, cdcs_min=1e-8, cdcs_max=1e3,
         f_lo = np.where(same_sign, f_mid, f_lo)
         hi = np.where(same_sign, hi, mid)
         if verbose:
-            print(f"\riterazione {i+1}/{n_iter}", end="", flush=True)
+            elapsed = time.time() - t_start
+            print(f"\riterazione {i+1}/{n_iter} - {elapsed:5.1f}s", end="", flush=True)
     if verbose:
         print()
 
@@ -244,7 +225,7 @@ def disc_model(mdot, radius, mstar=1.0):
 def lambda_fac_vec(eps, xi):
     """Lambda used for the Jeans mass in dust_quantities_stokes2 (Q=1, St=1e5)."""
     eps = np.asarray(eps, float).ravel(); xi = np.asarray(xi, float).ravel()
-    l = np.logspace(-8, np.log10(2), 4000)   # log grid: resolves the dust peak
+    l = np.linspace(0, 2, 500)
     lamb_b = l[None, :]; alpha_b = eps[:, None]; beta_b = xi[:, None]
     st_b = np.full_like(beta_b, 100000.0)
     with np.errstate(invalid='ignore'):
@@ -268,12 +249,9 @@ def dust_quantities_stokes2(gas_disc, vfrag, cdcs_min=1e-8, cdcs_max=1e3,
 
     cdcs = solve_cdcs_vec(eps, St_max, betacool, cdcs_min=cdcs_min,
                           cdcs_max=cdcs_max, n_iter=n_iter, n_lamb=n_lamb)
-    # lambda_J > Delta r_St  <=>  cdcs > sqrt(St/beta): regime (i), else (ii).
-    # (Equivalent to the original St_star test, without the nested bisection.)
-    x_coll = np.sqrt(St_max / betacool)
-    cd = np.where(cdcs > x_coll, cdcs, x_coll) * cs
-    cd = np.where(np.isnan(cdcs), np.nan, cd)
-    St_star = np.full_like(St_max, np.nan)
+    St_star = solve_St_star_vec(eps, betacool, n_iter=n_iter, n_lamb=n_lamb)
+
+    cd = np.where(St_max < St_star, cdcs * cs, np.sqrt(St_max / betacool) * cs)
 
     shape_orig = St_max.shape
     lam = lambda_fac_vec(eps, (cd / cs)**2).reshape(shape_orig)
