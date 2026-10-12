@@ -70,7 +70,8 @@ def solve_cdcs_vec(eps, st, beta, cdcs_min=1e-8, cdcs_max=1e3,
     eps_f, st_f, beta_f = eps.ravel(), st.ravel(), beta.ravel()
 
     def residual_vec(cdcs):
-        lam = get_Lambda_vec(cdcs, eps_f, st_f, n_lamb=n_lamb)
+        # the dispersion relation takes the temperature ratio (c_d/c_s)^2
+        lam = get_Lambda_vec(cdcs**2, eps_f, st_f, n_lamb=n_lamb)
         return cdcs - (lam / beta_f)**(1/3)
 
     lo = np.full_like(eps_f, cdcs_min)

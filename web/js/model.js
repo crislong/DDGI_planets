@@ -186,6 +186,6 @@ export const DEFAULTS = {
   mstar: 1, // Msun
   a0: 1, // micron
   rhoS: 1, // g/cm^3
-  bConv: 'cdcs', // argument of Lambda in eq. (C1): c_d/c_s (as in the code) or (c_d/c_s)^2
+  bConv: 'cdcs2', // argument of Lambda in eq. (C1): (c_d/c_s)^2 (temperature ratio), or c_d/c_s (original code)
   nIter: 50,
 };

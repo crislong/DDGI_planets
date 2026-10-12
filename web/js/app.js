@@ -65,13 +65,13 @@ function readHash() {
   for (const k of Object.keys(PARAMS)) if (h.has(k) && Number.isFinite(+h.get(k))) state.p[k] = +h.get(k);
   if (h.has('qa') && QUANT[h.get('qa')]) state.qa = h.get('qa');
   if (h.has('qb') && QUANT[h.get('qb')]) state.qb = h.get('qb');
-  if (h.get('b') === 'cdcs2') state.p.bConv = 'cdcs2';
+  if (h.get('b') === 'cdcs' || h.get('b') === 'cdcs2') state.p.bConv = h.get('b');
 }
 function writeHash() {
   const h = new URLSearchParams();
   for (const k of Object.keys(PARAMS)) h.set(k, +state.p[k].toPrecision(4));
   h.set('qa', state.qa); h.set('qb', state.qb);
-  if (state.p.bConv !== 'cdcs') h.set('b', state.p.bConv);
+  if (state.p.bConv !== DEFAULTS.bConv) h.set('b', state.p.bConv);
   history.replaceState(null, '', `#${h}`);
 }
 
