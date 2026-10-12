@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DDGI Explorer</title>
+  <meta name="description" content="Interactive models of dust-driven gravitational instability in self-regulated protoplanetary discs (Longarini & Clarke 2026).">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<header class="top">
+  <div>
+    <h1>DDGI Explorer</h1>
+    <p class="sub">Planetary core formation through dust-driven gravitational instability in self-regulated (Q&nbsp;=&nbsp;1) discs. Longarini &amp; Clarke (2026), MNRAS, paper I.</p>
+  </div>
+  <div class="top-actions">
+    <button id="btn-theme" type="button" title="Toggle light/dark">◐</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="controls" id="controls">
+    <section>
+      <h2>Dust growth</h2>
+      <div class="ctl" data-key="vfrag"></div>
+    </section>
+    <section>
+      <h2>Dust-to-gas ratio ε(St)</h2>
+      <p class="hint">ε = ε<sub>bkg</sub> + (ε<sub>max</sub> − ε<sub>bkg</sub>) exp[−(log St)² / 2σ<sub>ε</sub>²], evaluated at St<sub>max</sub> (eq. 7).</p>
+      <div class="ctl" data-key="epsBkg"></div>
+      <div class="ctl" data-key="epsMax"></div>
+      <div class="ctl" data-key="sigEps"></div>
+      <div id="eps-preview" class="eps-preview" aria-label="Preview of eps(St)"></div>
+    </section>
+    <section>
+      <h2>Star</h2>
+      <div class="ctl" data-key="mstar"></div>
+    </section>
+    <section>
+      <h2>Growth timescale (eq. 14)</h2>
+      <div class="ctl" data-key="a0"></div>
+      <div class="ctl" data-key="rhoS"></div>
+    </section>
+    <details class="advanced">
+      <summary>Display &amp; numerics</summary>
+      <label class="row">Grid resolution
+        <select id="sel-res">
+          <option value="100">100 × 100</option>
+          <option value="150">150 × 150</option>
+          <option value="200" selected>200 × 200</option>
+          <option value="300">300 × 300</option>
+        </select>
+      </label>
+      <label class="row">Colormap
+        <select id="sel-cmap">
+          <option value="RdBu_r" selected>RdBu_r (paper)</option>
+          <option value="viridis">viridis</option>
+          <option value="magma">magma</option>
+        </select>
+      </label>
+      <label class="row">Argument of Λ in eq. (C1)
+        <select id="sel-bconv">
+          <option value="cdcs" selected>c_d/c_s (as in code)</option>
+          <option value="cdcs2">(c_d/c_s)²</option>
+        </select>
+      </label>
+      <label class="row check"><input type="checkbox" id="chk-gas-all"> Gas maps over the whole plane</label>
+      <label class="row check"><input type="checkbox" id="chk-edges" checked> Region boundaries on maps</label>
+    </details>
+    <div class="btn-row">
+      <button id="btn-pin" type="button" title="Keep the current DDGI boundary and M_J histogram for comparison">Pin for comparison</button>
+      <button id="btn-reset" type="button">Reset</button>
+    </div>
+    <div id="pins" class="pins"></div>
+    <p class="status" id="status">Loading Λ tables…</p>
+  </aside>
+
+  <main class="panels">
+    <figure class="panel">
+      <figcaption>
+        <span class="panel-title">Regimes</span>
+        <span class="legend" id="legend-regimes"></span>
+      </figcaption>
+      <div class="map" id="map-regimes"></div>
+    </figure>
+
+    <figure class="panel">
+      <figcaption>
+        <select class="qsel" id="q-a"></select>
+        <select class="rsel" id="r-a" title="Colour range"><option value="default">default range</option><option value="auto">auto range</option></select>
+      </figcaption>
+      <div class="map" id="map-a"></div>
+      <div class="cbar" id="cbar-a"></div>
+    </figure>
+
+    <figure class="panel">
+      <figcaption>
+        <select class="qsel" id="q-b"></select>
+        <select class="rsel" id="r-b" title="Colour range"><option value="default">default range</option><option value="auto">auto range</option></select>
+      </figcaption>
+      <div class="map" id="map-b"></div>
+      <div class="cbar" id="cbar-b"></div>
+    </figure>
+
+    <figure class="panel">
+      <figcaption><span class="panel-title">Jeans mass of DDGI-unstable cells</span></figcaption>
+      <div id="hist"></div>
+      <div class="stats" id="stats"></div>
+      <p class="hint">All DDGI cells of the log-spaced (Ṁ, r) grid weighted equally: not a probability distribution of core masses.</p>
+    </figure>
+
+    <section class="panel inspector">
+      <h2>Point inspector <span class="muted" id="insp-mode">hover a map, click to pin</span></h2>
+      <div id="inspector" class="insp-grid"></div>
+    </section>
+
+    <section class="panel notes">
+      <h2>Model</h2>
+      <ul>
+        <li><b>Gas:</b> piecewise power-law Q = 1 solutions of Clarke (2009), Table A1, rescaled with M<sub>★</sub><sup>1/3</sup>. β = 4 / (9 α<sub>GI</sub>).</li>
+        <li><b>Regimes:</b> gas fragmentation α<sub>GI</sub> &gt; 0.06; no GI α<sub>GI</sub> &lt; 10⁻⁴; MRI where α<sub>GI</sub> &lt; 0.01 and (T &gt; 1000 K or r &gt; 100 au).</li>
+        <li><b>Dust:</b> St<sub>max</sub> = β (v<sub>frag</sub>/c<sub>s</sub>)² (eq. 6); ε(St<sub>max</sub>) from eq. 7; c<sub>d</sub>/c<sub>s</sub> from the implicit eq. (C1) if λ<sub>J</sub> &gt; Δr<sub>St</sub>, else (St/β)<sup>1/2</sup>. DDGI where c<sub>d</sub>/c<sub>s</sub> &lt; ε (dashed line).</li>
+        <li><b>Λ</b> from the two-fluid marginal stability curve, precomputed on a (b, ε, St) grid and interpolated in log space.</li>
+        <li><b>M<sub>J</sub></b> = λ<sub>J,g</sub>² Λ<sub>J</sub>² Σ<sub>g</sub>, with λ<sub>J,g</sub> = c<sub>s</sub>²/(πGΣ<sub>g</sub>) and Λ<sub>J</sub> = Λ(ε, (c<sub>d</sub>/c<sub>s</sub>)², St → ∞)/(1+ε). t<sub>growth</sub> from eq. 14 with St<sub>0</sub> = πρ<sub>s</sub>a<sub>0</sub>/(2Σ<sub>g</sub>); t<sub>DDGI</sub> = Ω⁻¹ [Λ<sub>J</sub>/(3(1+ε))]<sup>1/2</sup>.</li>
+      </ul>
+    </section>
+  </main>
+</div>
+
+<div id="tooltip" class="tooltip" hidden></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,51 @@
+{
+ "encoding": {
+  "type": "uint16le",
+  "log10_lo": -3.0,
+  "log10_hi": 1.5,
+  "nan_code": 0,
+  "qmin": 1,
+  "qmax": 65535
+ },
+ "lambda3d": {
+  "file": "lambda3d.bin",
+  "order": [
+   "St",
+   "eps",
+   "b"
+  ],
+  "b": {
+   "lo": -5.0,
+   "hi": 3.0,
+   "n": 321
+  },
+  "eps": {
+   "lo": -3.0,
+   "hi": 0.625,
+   "n": 59
+  },
+  "St": {
+   "lo": -4.0,
+   "hi": 3.0,
+   "n": 113
+  }
+ },
+ "lambda2d": {
+  "file": "lambda2d.bin",
+  "order": [
+   "eps",
+   "b"
+  ],
+  "b": {
+   "lo": -8.0,
+   "hi": 4.0,
+   "n": 961
+  },
+  "eps": {
+   "lo": -3.0,
+   "hi": 0.625,
+   "n": 363
+  },
+  "St": 100000.0
+ }
+}
